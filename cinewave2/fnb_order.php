@@ -18,7 +18,8 @@ if (!isset($_SESSION['id'])) {
 
 $pdo = getDBConnection();
 
-if (!isset($_SESSION['cart'])) {$_SESSION['cart'] = [];
+if (!isset($_SESSION['cart'])) {
+    $_SESSION['cart'] = [];
 }
 
 // 2. Resolve Seat & Showtime Context Across GET and SESSION
@@ -31,17 +32,17 @@ $showtime_id = filter_input(INPUT_GET, 'showtime_id', FILTER_VALIDATE_INT)
     ?? 1001;
 
 if ($seat_id > 0) {
-    $_SESSION['seat_id'] =$seat_id;
+    $_SESSION['seat_id'] = $seat_id;
 }
 if ($showtime_id > 0) {
-    $_SESSION['showtime_id'] =$showtime_id;
+    $_SESSION['showtime_id'] = $showtime_id;
 }
 
 $has_seat_id = ($seat_id > 0);
 
 // Helper function to maintain GET context across tab links
-function getUrlWithParams($tab,$extra_param = '') {
-    global $has_seat_id,$seat_id;
+function getUrlWithParams($tab, $extra_param = '') {
+    global $has_seat_id, $seat_id;
     $url = "fnb_order.php?tab=" . urlencode($tab);
     if ($has_seat_id) {
         $url .= "&id=" . intval($seat_id);
@@ -63,23 +64,25 @@ if (isset($_GET['remove_key'])) {
         unset($_SESSION['cart'][$remove_key]);
         $_SESSION['cart'] = array_values($_SESSION['cart']); // Re-index array
     }
-    $active_tab = (isset($_GET['tab']) && in_array($_GET['tab'], ['fnb', 'combo'])) ?$_GET['tab'] : 'fnb';
+    $active_tab = (isset($_GET['tab']) && in_array($_GET['tab'], ['fnb', 'combo'])) ? $_GET['tab'] : 'fnb';
     header("Location: " . getUrlWithParams($active_tab, "open_receipt=1"));
     exit();
 }
 
 // Action B: Process FNB Order Submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['fnb_order'])) {$quantity = filter_input(INPUT_POST, 'quantity', FILTER_VALIDATE_INT) ?? 1;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['fnb_order'])) {
+    $quantity = filter_input(INPUT_POST, 'quantity', FILTER_VALIDATE_INT) ?? 1;
     $price    = filter_input(INPUT_POST, 'price', FILTER_VALIDATE_FLOAT) ?? 0.0;
     $fnb_id   = filter_input(INPUT_POST, 'fnb_id', FILTER_VALIDATE_INT);
     $remarks  = trim($_POST['remarks'] ?? '');
 
-    if ($fnb_id &&$quantity > 0) {
-        $stmt_name =$pdo->prepare("SELECT fnb_name FROM fnb WHERE fnb_id = :fnb_id LIMIT 1");
-        $stmt_name->execute([':fnb_id' =>$fnb_id]);
-        $row =$stmt_name->fetch(PDO::FETCH_ASSOC);
+    if ($fnb_id && $quantity > 0) {
+        $stmt_name = $pdo->prepare("SELECT fnb_name FROM fnb WHERE fnb_id = :fnb_id LIMIT 1");
+        $stmt_name->execute([':fnb_id' => $fnb_id]);
+        $row = $stmt_name->fetch(PDO::FETCH_ASSOC);
 
-        if ($row) {$_SESSION['cart'][] = [
+        if ($row) {
+            $_SESSION['cart'][] = [
                 'type'       => 'FNB',
                 'item_id'    => $fnb_id,
                 'name'       => $row['fnb_name'],
@@ -96,17 +99,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['fnb_order'])) {$quant
 }
 
 // Action C: Process Combo Order Submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['combo_order'])) {$quantity = filter_input(INPUT_POST, 'quantity', FILTER_VALIDATE_INT) ?? 1;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['combo_order'])) {
+    $quantity = filter_input(INPUT_POST, 'quantity', FILTER_VALIDATE_INT) ?? 1;
     $price    = filter_input(INPUT_POST, 'price', FILTER_VALIDATE_FLOAT) ?? 0.0;
     $combo_id = filter_input(INPUT_POST, 'combo_id', FILTER_VALIDATE_INT);
     $remarks  = trim($_POST['remarks'] ?? '');
 
-    if ($combo_id &&$quantity > 0) {
-        $stmt_name =$pdo->prepare("SELECT combo_name FROM combo WHERE combo_id = :combo_id LIMIT 1");
-        $stmt_name->execute([':combo_id' =>$combo_id]);
-        $row =$stmt_name->fetch(PDO::FETCH_ASSOC);
+    if ($combo_id && $quantity > 0) {
+        $stmt_name = $pdo->prepare("SELECT combo_name FROM combo WHERE combo_id = :combo_id LIMIT 1");
+        $stmt_name->execute([':combo_id' => $combo_id]);
+        $row = $stmt_name->fetch(PDO::FETCH_ASSOC);
 
-        if ($row) {$_SESSION['cart'][] = [
+        if ($row) {
+            $_SESSION['cart'][] = [
                 'type'       => 'Combo',
                 'item_id'    => $combo_id,
                 'name'       => $row['combo_name'],
@@ -122,7 +127,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['combo_order'])) {$qua
     exit();
 }
 
-$valid_tabs = ['fnb', 'combo'];$active_tab = (isset($_GET['tab']) && in_array($_GET['tab'], $valid_tabs)) ?$_GET['tab'] : 'fnb';
+$valid_tabs = ['fnb', 'combo'];
+$active_tab = (isset($_GET['tab']) && in_array($_GET['tab'], $valid_tabs)) ? $_GET['tab'] : 'fnb';
 
 // 3. Include Header (HTML Output Starts Here)
 require_once __DIR__ . '/header.php';
@@ -221,14 +227,14 @@ require_once __DIR__ . '/header.php';
         <?php if ($active_tab === 'fnb'): ?>
             <section class="container">
                 <?php 
-                $stmt =$pdo->query("SELECT * FROM fnb ORDER BY fnb_id ASC");
+                $stmt = $pdo->query("SELECT * FROM fnb ORDER BY fnb_id ASC");
                 if ($stmt) {
-                    while ($row =$stmt->fetch(PDO::FETCH_ASSOC)) { 
-                        $fnb_id_val    =$row['fnb_id'];
-                        $fnb_name_val  =$row['fnb_name'];
-                        $fnb_price_val =$row['fnb_price'];
-                        $path_val      =$row['path'] ?? 'asset/fnb/default.jpg';
-                        $desc_val      =$row['description'] ?? '';
+                    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { 
+                        $fnb_id_val    = $row['fnb_id'];
+                        $fnb_name_val  = $row['fnb_name'];
+                        $fnb_price_val = $row['fnb_price'];
+                        $path_val      = $row['path'] ?? 'asset/fnb/default.jpg';
+                        $desc_val      = $row['description'] ?? '';
                 ?>
                     <div class="card">
                         <img src="<?php echo htmlspecialchars($path_val, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($fnb_name_val, ENT_QUOTES, 'UTF-8'); ?>" height="200">
@@ -236,9 +242,9 @@ require_once __DIR__ . '/header.php';
                         <p><?php echo htmlspecialchars($desc_val, ENT_QUOTES, 'UTF-8'); ?></p>
                         <h5>RM <?php echo number_format($fnb_price_val, 2); ?></h5>
                         
-                        <?php if (isset($_SESSION['id']) &&$has_seat_id): ?>
+                        <?php if (isset($_SESSION['id']) && $has_seat_id): ?>
                             <button type="button" class="btn" style="display:block; width:100%; text-align:center;" 
-                                    onclick="openOrderModal('fnb', '<?php echo $fnb_id_val; ?>', '<?php echo htmlspecialchars($fnb_name_val, ENT_QUOTES); ?>', '<?php echo$fnb_price_val; ?>')">
+                                    onclick="openOrderModal('fnb', '<?php echo $fnb_id_val; ?>', '<?php echo htmlspecialchars($fnb_name_val, ENT_QUOTES); ?>', '<?php echo $fnb_price_val; ?>')">
                                 Add
                             </button>
                         <?php endif; ?>
@@ -252,6 +258,160 @@ require_once __DIR__ . '/header.php';
         <?php else: ?>
             <section class="container">
                 <?php 
-                $stmt =$pdo->query("SELECT * FROM combo ORDER BY combo_id ASC");
+                $stmt = $pdo->query("SELECT * FROM combo ORDER BY combo_id ASC");
                 if ($stmt) {
-                    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {$combo_id_val    = $row['combo_id'];$combo_name_
+                    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { 
+                        $combo_id_val    = $row['combo_id'];
+                        $combo_name_val  = $row['combo_name'];
+                        $combo_price_val = $row['combo_price'];
+                        $path_val        = $row['path'] ?? 'asset/fnb/default.jpg';
+                        $desc_val        = $row['description'] ?? '';
+                ?>
+                    <div class="card">
+                        <img src="<?php echo htmlspecialchars($path_val, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($combo_name_val, ENT_QUOTES, 'UTF-8'); ?>" height="200">
+                        <h3><?php echo htmlspecialchars($combo_name_val, ENT_QUOTES, 'UTF-8'); ?></h3>
+                        <p><?php echo htmlspecialchars($desc_val, ENT_QUOTES, 'UTF-8'); ?></p>
+                        <h5>RM <?php echo number_format($combo_price_val, 2); ?></h5>
+                        
+                        <?php if (isset($_SESSION['id']) && $has_seat_id): ?>
+                            <button type="button" class="btn" style="display:block; width:100%; text-align:center;" 
+                                    onclick="openOrderModal('combo', '<?php echo $combo_id_val; ?>', '<?php echo htmlspecialchars($combo_name_val, ENT_QUOTES); ?>', '<?php echo $combo_price_val; ?>')">
+                                Add
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                <?php 
+                    }
+                } 
+                ?>
+            </section>
+        <?php endif; ?>
+        
+        <div style="text-align:center; margin-top: 20px;">
+            <?php if (isset($_SESSION['id']) && $has_seat_id): ?>
+                <?php if (!empty($_SESSION['cart'])): ?>
+                    <button type="button" class="btn" onclick="openReceiptModal()">Pay</button>
+                <?php else: ?>
+                    <a href="payment.php?id=<?php echo $seat_id; ?>" class="btn">Pay</a>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+
+        <!-- Order Modal -->
+        <div id="orderModal" class="modal-overlay">
+            <div class="modal-card">
+                <h2 id="modalItemTitle">Select Item</h2>
+                <form id="orderModalForm" method="POST" action="">
+                    <input type="hidden" id="modalItemId" name="" value="">
+                    <input type="hidden" id="modalItemPrice" name="price" value="">
+                    
+                    <label>Quantity</label>
+                    <input type="number" name="quantity" value="1" min="1" required>
+                    
+                    <label>Remarks</label>
+                    <input type="text" name="remarks" placeholder="Optional notes (e.g. Less ice)">
+                    
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeOrderModal()">Cancel</button>
+                        <button type="submit" id="modalSubmitBtn" name="" class="btn">Confirm Order</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Receipt Modal -->
+        <div id="receiptModal" class="modal-overlay">
+            <div class="receipt-card">
+                <h2>Order Receipt Summary</h2>
+                <table class="receipt-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Qty</th>
+                            <th>Price</th>
+                            <th>Total</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        $grand_total = 0;
+                        if (!empty($_SESSION['cart'])):
+                            foreach ($_SESSION['cart'] as $index => $item): 
+                                $grand_total += $item['total'];
+                        ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($item['name'], ENT_QUOTES, 'UTF-8'); ?> <small>(<?php echo htmlspecialchars($item['type'], ENT_QUOTES, 'UTF-8'); ?>)</small></td>
+                                <td><?php echo intval($item['quantity']); ?></td>
+                                <td>RM <?php echo number_format($item['unit_price'], 2); ?></td>
+                                <td>RM <?php echo number_format($item['total'], 2); ?></td>
+                                <td>
+                                    <a href="<?php echo getUrlWithParams($active_tab, 'remove_key=' . $index); ?>" class="btn-drop">Drop</a>
+                                </td>
+                            </tr>
+                        <?php 
+                            endforeach; 
+                        else:
+                        ?>
+                            <tr><td colspan="5" style="text-align: center; color: #aaa;">No food or combo items selected.</td></tr>
+                        <?php endif; ?>
+                        <tr style="font-weight: bold; background-color: #1e1e36; color: #e84118;">
+                            <td colspan="3" style="text-align:right;">Grand Total:</td>
+                            <td colspan="2">RM <?php echo number_format($grand_total, 2); ?></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeReceiptModal()">Modify Order</button>
+                    <a href="payment.php?id=<?php echo $seat_id; ?>" class="btn">Proceed to Payment</a>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            const alertBox = document.getElementById('successAlert');
+            if (alertBox) {
+                setTimeout(function() {
+                    alertBox.style.opacity = '0';
+                    setTimeout(function() { alertBox.style.display = 'none'; }, 500);
+                }, 4000);
+            }
+
+            function openOrderModal(type, id, name, price) {
+                const modal = document.getElementById('orderModal');
+                const form = document.getElementById('orderModalForm');
+                const title = document.getElementById('modalItemTitle');
+                const itemIdInput = document.getElementById('modalItemId');
+                const itemPriceInput = document.getElementById('modalItemPrice');
+                const submitBtn = document.getElementById('modalSubmitBtn');
+
+                title.innerText = "Order: " + name;
+                itemPriceInput.value = price;
+
+                if (type === 'fnb') {
+                    form.action = "<?php echo getUrlWithParams('fnb'); ?>";
+                    itemIdInput.name = "fnb_id";
+                    itemIdInput.value = id;
+                    submitBtn.name = "fnb_order";
+                } else {
+                    form.action = "<?php echo getUrlWithParams('combo'); ?>";
+                    itemIdInput.name = "combo_id";
+                    itemIdInput.value = id;
+                    submitBtn.name = "combo_order";
+                }
+
+                modal.style.display = 'flex';
+            }
+
+            function closeOrderModal() { document.getElementById('orderModal').style.display = 'none'; }
+            function openReceiptModal() { document.getElementById('receiptModal').style.display = 'flex'; }
+            function closeReceiptModal() { document.getElementById('receiptModal').style.display = 'none'; }
+
+            <?php if (isset($_GET['open_receipt'])): ?>
+                openReceiptModal();
+            <?php endif; ?>
+        </script>
+    </body>
+    <?php if (file_exists(__DIR__ . "/footer.html")) { include __DIR__ . "/footer.html"; } ?>
+</html>
