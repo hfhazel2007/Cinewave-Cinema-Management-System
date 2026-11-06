@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     if (!$email || empty($password)) {
         $error = "Please provide a valid email address and password.";
     } else {
-        echo password_hash('admin123', PASSWORD_DEFAULT);
+       
         // Step A: Check Customer Table
         $stmt = $pdo->prepare("
             SELECT membership_id, password, points, customer_group, membership_status 
