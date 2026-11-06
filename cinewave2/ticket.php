@@ -76,7 +76,7 @@ $row_seat = $result_seat->fetch(PDO::FETCH_ASSOC);
                         <option value="Adult">Student</option>
                         <option value="Senior">Senior</option>
                     </select>
-                    <button type="submit" name="submit_ticket"> <a href="fnb_order.php?id=<?php echo $seat_id?>" class="btn">Next</a></button>
+                        <a href="fnb_order.php?id=<?php echo htmlspecialchars($seat_id, ENT_QUOTES, 'UTF-8'); ?>" class="btn">Next</a>
                 </form>
                    
             </div>
