@@ -1,8 +1,8 @@
 FROM php:8.2-apache
 
-# Install database extensions for PHP
-# Use pdo_mysql mysqli if keeping MySQL, or pdo_pgsql pgsql if using Supabase (PostgreSQL)
-RUN docker-php-ext-install pdo pdo_mysql mysqli
+# Install PostgreSQL libraries and PHP PDO extensions for Supabase
+RUN apt-get update && apt-get install -y libpq-dev \
+    && docker-php-ext-install pdo pdo_pgsql pgsql
 
 # Enable Apache URL rewrite module
 RUN a2enmod rewrite
