@@ -35,7 +35,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     if (!$email || empty($password)) {
         $error = "Please provide a valid email address and password.";
     } else {
-       
         // Step A: Check Customer Table
         $stmt = $pdo->prepare("
             SELECT membership_id, password, points, customer_group, membership_status 
@@ -44,10 +43,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             LIMIT 1
         ");
         $stmt->execute([':email' => $email]);
-        $customer = $stmt->fetch();
+        $customer = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Check if customer exists and is active (handles both boolean true/1)
-        if ($customer && $customer['membership_status'] && password_verify($password, $customer['password'])) {
+        // Normalize PostgreSQL boolean status flag
+        $is_customer_active = $customer && ($customer['membership_status'] === true || $customer['membership_status'] === 't' || $customer['membership_status'] == 1);
+
+        if ($is_customer_active && password_verify($password, $customer['password'])) {
             session_regenerate_id(true);
 
             $_SESSION['id']         = $customer['membership_id'];
@@ -59,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             header("Location: index.php");
             exit();
         } 
-        
+
         // Step B: Check Staff Table if Customer check fails
         $stmtStaff = $pdo->prepare("
             SELECT staff_id, staff_password, account_status 
@@ -68,9 +69,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             LIMIT 1
         ");
         $stmtStaff->execute([':email' => $email]);
-        $staff = $stmtStaff->fetch();
+        $staff = $stmtStaff->fetch(PDO::FETCH_ASSOC);
 
-        if ($staff && $staff['account_status'] && password_verify($password, $staff['staff_password'])) {
+        $is_staff_active = $staff && ($staff['account_status'] === true || $staff['account_status'] === 't' || $staff['account_status'] == 1);
+
+        if ($is_staff_active && password_verify($password, $staff['staff_password'])) {
             session_regenerate_id(true);
 
             $_SESSION['id']   = $staff['staff_id'];
@@ -90,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 // -----------------------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
     $active_tab = 'register';
-    
+
     $fullname         = trim($_POST['fullname'] ?? '');
     $phone_number     = trim($_POST['phone_number'] ?? '');
     $email            = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
@@ -109,27 +112,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         // Check if email already exists
         $checkStmt = $pdo->prepare("SELECT membership_id FROM customer WHERE LOWER(email) = LOWER(:email)");
         $checkStmt->execute([':email' => $email]);
-        
+
         if ($checkStmt->fetch()) {
             $error = "An account with this email address already exists.";
         } else {
             // Calculate Age Group
-            $birth_date_obj  = new DateTime($date_of_birth);
+            $birth_date_obj   = new DateTime($date_of_birth);
             $current_date_obj = new DateTime();
-            $age_years       = $current_date_obj->diff($birth_date_obj)->y;
-            $customer_group  = ($age_years > 17) ? "Adult" : "Child";
+            $age_years        = $current_date_obj->diff($birth_date_obj)->y;
+            $customer_group   = ($age_years > 17) ? "Adult" : "Child";
 
-            // Hash Password Safely via PDO
+            // Hash Password Safely
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-            // Insert New Customer (PostgreSQL boolean literal 'true')
+            // Insert New Customer using RETURNING for PostgreSQL ID retrieval
             $insertSql = "
                 INSERT INTO customer (fullname, phone_number, email, date_of_birth, customer_group, password, points, membership_status, path) 
                 VALUES (:fullname, :phone_number, :email, :dob, :group, :password, 0, true, 'asset/customer/user.png')
+                RETURNING membership_id
             ";
 
             $stmtInsert = $pdo->prepare($insertSql);
-            $success = $stmtInsert->execute([
+            $stmtInsert->execute([
                 ':fullname'     => $fullname,
                 ':phone_number' => $phone_number,
                 ':email'        => $email,
@@ -138,9 +142,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
                 ':password'     => $hashed_password
             ]);
 
-            if ($success) {
-                $new_user_id = $pdo->lastInsertId();
+            $new_user_id = $stmtInsert->fetchColumn();
 
+            if ($new_user_id) {
                 session_regenerate_id(true);
                 $_SESSION['id']     = $new_user_id;
                 $_SESSION['user']   = "customer";
